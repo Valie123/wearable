@@ -29,6 +29,9 @@ targets:
           R-R intervals, battery, and sensor data locally on your device.
         UIBackgroundModes:
           - bluetooth-central
+        NSLocalNetworkUsageDescription: OpenWhoop connects to your local WHOOP backend.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
         WHOOP_BASE_URL: $(WHOOP_BASE_URL)
         WHOOP_API_KEY: $(WHOOP_API_KEY)
         WHOOP_DEVICE_ID: $(WHOOP_DEVICE_ID)
@@ -52,3 +55,13 @@ targets:
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  OpenWhoop:
+    build:
+      targets:
+        OpenWhoop: all
+    run:
+      config: Debug
+    archive:
+      config: Release
