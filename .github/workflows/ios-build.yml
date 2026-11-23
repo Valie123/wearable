@@ -54,7 +54,7 @@ jobs:
           mkdir -p build/ipa/Payload
           ditto "$APP_PATH" build/ipa/Payload/OpenWhoop.app
           cd build/ipa
-          ditto -c -k --sequesterRsrc Payload ../OpenWhoop-unsigned.ipa
+          ditto -c -k --sequesterRsrc --keepParent Payload ../OpenWhoop-unsigned.ipa
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
