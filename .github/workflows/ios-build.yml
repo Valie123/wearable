@@ -1,0 +1,65 @@
+name: Build OpenWhoop iOS
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Create local secrets configuration
+        env:
+          WHOOP_BASE_URL: ${{ secrets.WHOOP_BASE_URL }}
+          WHOOP_API_KEY: ${{ secrets.WHOOP_API_KEY }}
+          WHOOP_DEVICE_ID: ${{ secrets.WHOOP_DEVICE_ID }}
+        run: |
+          test -n "$WHOOP_BASE_URL"
+          test -n "$WHOOP_API_KEY"
+          test -n "$WHOOP_DEVICE_ID"
+          umask 077
+          printf 'WHOOP_BASE_URL = http:/$()/%s\n' "${WHOOP_BASE_URL#http://}" > ios/OpenWhoop/Config/Secrets.xcconfig
+          printf 'WHOOP_API_KEY = %s\n' "$WHOOP_API_KEY" >> ios/OpenWhoop/Config/Secrets.xcconfig
+          printf 'WHOOP_DEVICE_ID = %s\n' "$WHOOP_DEVICE_ID" >> ios/OpenWhoop/Config/Secrets.xcconfig
+
+      - name: Generate Xcode project
+        run: xcodegen generate --spec ios/project.yml
+
+      - name: Build unsigned iOS app
+        run: |
+          xcodebuild \
+            -project ios/OpenWhoop.xcodeproj \
+            -scheme OpenWhoop \
+            -configuration Debug \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            build
+
+      - name: Package unsigned IPA
+        run: |
+          APP_PATH="build/DerivedData/Build/Products/Debug-iphoneos/OpenWhoop.app"
+          test -d "$APP_PATH"
+          mkdir -p build/ipa/Payload
+          ditto "$APP_PATH" build/ipa/Payload/OpenWhoop.app
+          cd build/ipa
+          ditto -c -k --sequesterRsrc Payload ../OpenWhoop-unsigned.ipa
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenWhoop-unsigned-ipa
+          path: build/OpenWhoop-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 7
