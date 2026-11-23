@@ -32,7 +32,7 @@ jobs:
           printf 'WHOOP_DEVICE_ID = %s\n' "$WHOOP_DEVICE_ID" >> ios/OpenWhoop/Config/Secrets.xcconfig
 
       - name: Generate Xcode project
-        run: xcodegen generate --spec ios/project.yml
+        run: cd ios && xcodegen generate
 
       - name: Build unsigned iOS app
         run: |
