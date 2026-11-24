@@ -504,6 +504,7 @@ final class ServerSync {
         if let a = profile.age       { body["age"]         = a }
         if let s = profile.sex       { body["sex"]         = s }
         guard let bodyData = try? JSONSerialization.data(withJSONObject: body) else { return false }
+        print("PROFILE: JSON created, calling POST")
         return await post(path: path, body: bodyData)
     }
 
