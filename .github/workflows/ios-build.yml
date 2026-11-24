@@ -1,3 +1,4 @@
+```yaml
 name: Build OpenWhoop iOS
 
 on:
@@ -47,6 +48,14 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             build
 
+      - name: Verify built app configuration
+        run: |
+          PLIST="build/DerivedData/Build/Products/Debug-iphoneos/OpenWhoop.app/Info.plist"
+          /usr/libexec/PlistBuddy -c "Print :WHOOP_BASE_URL" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Print :WHOOP_DEVICE_ID" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Print :WHOOP_API_KEY" "$PLIST" >/dev/null
+          echo "API key is present in built app"
+
       - name: Package unsigned IPA
         run: |
           APP_PATH="build/DerivedData/Build/Products/Debug-iphoneos/OpenWhoop.app"
@@ -63,3 +72,4 @@ jobs:
           path: build/OpenWhoop-unsigned.ipa
           if-no-files-found: error
           retention-days: 7
+```
