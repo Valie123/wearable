@@ -212,18 +212,44 @@ final class Uploader {
     /// Perform a POST with JSON body. Returns true on 2xx.
     private func post(path: String, body: [String: Any]) async -> Bool {
         guard let url = URL(string: path, relativeTo: config.baseURL)
-                     ?? URL(string: config.baseURL.absoluteString + path) else { return false }
+                     ?? URL(string: config.baseURL.absoluteString + path) else {
+            print("UPLOAD ERROR: Invalid URL for \(path)")
+            return false
+        }
+
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(config.apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        guard let data = try? JSONSerialization.data(withJSONObject: body) else { return false }
+
+        guard let data = try? JSONSerialization.data(withJSONObject: body) else {
+            print("UPLOAD ERROR: JSON encoding failed for \(path)")
+            return false
+        }
+
         request.httpBody = data
+
+        print("UPLOAD: POST \(path) — \(data.count) bytes")
+
         do {
-            let (_, response) = try await session.data(for: request)
-            guard let http = response as? HTTPURLResponse else { return false }
-            return (200..<300).contains(http.statusCode)
+            let (responseData, response) = try await session.data(for: request)
+
+            guard let http = response as? HTTPURLResponse else {
+                print("UPLOAD ERROR: No HTTP response for \(path)")
+                return false
+            }
+
+            print("UPLOAD: \(path) returned HTTP \(http.statusCode)")
+
+            if !(200..<300).contains(http.statusCode) {
+                let responseText = String(data: responseData, encoding: .utf8) ?? "Unreadable response"
+                print("UPLOAD ERROR: \(path): \(responseText)")
+                return false
+            }
+
+            return true
         } catch {
+            print("UPLOAD ERROR: \(path): \(error.localizedDescription)")
             return false
         }
     }
