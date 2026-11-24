@@ -1,7 +1,7 @@
 ```yaml
 name: Build OpenWhoop iOS
 
-on:
+'on':
   workflow_dispatch:
 
 permissions:
