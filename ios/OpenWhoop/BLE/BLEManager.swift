@@ -388,7 +388,11 @@ public final class BLEManager: NSObject, ObservableObject {
     /// Fire-and-forget drain: pushes any pending rows to the server.
     /// No-op when uploader is nil (placeholder secrets / unconfigured).
     private func uploadOpportunistically() {
-        guard let uploader else { return }
+        guard let uploader else {
+            log("UPLOAD: skipped — uploader is nil")
+            return
+        }
+        log("UPLOAD: drain started")
         Task { await uploader.drain() }
     }
 
