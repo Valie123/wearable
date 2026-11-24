@@ -125,23 +125,46 @@ public final class BLEManager: NSObject, ObservableObject {
     /// Build the WhoopStore + Collector + Backfiller asynchronously. Safe to call multiple
     /// times — bails out early if the collector is already initialised.
     func bootstrapStore() async {
-        guard collector == nil else { return }
-        guard let path = try? StorePaths.defaultDatabasePath() else { return }
-        guard let store = try? await WhoopStore(path: path) else { return }
+        guard collector == nil else {
+            log("BOOTSTRAP: skipped — collector already exists")
+            return
+        }
+
+        log("BOOTSTRAP: starting")
+
+        guard let path = try? StorePaths.defaultDatabasePath() else {
+            log("BOOTSTRAP ERROR: database path unavailable")
+            return
+        }
+
+        guard let store = try? await WhoopStore(path: path) else {
+            log("BOOTSTRAP ERROR: could not open database")
+            return
+        }
+
+        log("BOOTSTRAP: database opened")
+
         try? await store.upsertDevice(id: deviceId, mac: nil, name: "WHOOP 4.0")
-        // Research toggle — OFF by default. When disabled the app is decoded-only and never
-        // persists raw frames. Flip "enableRawCapture" in UserDefaults to capture raw again.
+
         let enableRawCapture = UserDefaults.standard.bool(forKey: "enableRawCapture")
+
         collector = Collector(store: store, deviceId: deviceId,
                               enableRawCapture: enableRawCapture)
+
         backfiller = Backfiller(store: store, deviceId: deviceId,
                                 ackTrim: { [weak self] trim, endData in
                                     self?.ackHistoricalChunk(trim: trim, endData: endData)
                                 },
                                 enableRawCapture: enableRawCapture)
+
+        log("BOOTSTRAP: collector and backfiller created")
+
         if let cfg = AppConfig.uploaderConfig(deviceId: deviceId) {
             uploader = Uploader(config: cfg, store: store, deviceId: deviceId)
             serverSync = ServerSync(config: cfg, store: store, deviceId: deviceId)
+            log("BOOTSTRAP: uploader and ServerSync created")
+        } else {
+            log("BOOTSTRAP ERROR: server configuration missing")
         }
     }
 
