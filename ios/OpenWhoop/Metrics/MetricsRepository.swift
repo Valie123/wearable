@@ -155,12 +155,19 @@ final class MetricsRepository: ObservableObject {
         await ensureOpen()
         isRefreshing = true
         lastError = nil
-        await serverSync?.pullDerived()
+
+        // Load cached metrics immediately; don't wait for the network.
         await load()
+
+        // Refresh from the server afterwards.
+        await serverSync?.pullDerived()
+
+        // Reload to show any newly downloaded metrics.
+        await load()
+
         isRefreshing = false
         lastRefreshedAt = Date()
 
-        // Morning recovery notification: fire once per calendar day when recovery is available.
         if let metric = today, let recovery = metric.recovery {
             RecoveryNotifier.notify(recovery: recovery, forDay: metric.day)
         }
