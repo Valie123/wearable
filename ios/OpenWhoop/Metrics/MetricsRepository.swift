@@ -64,27 +64,46 @@ final class MetricsRepository: ObservableObject {
     /// can observe store == nil after ensureOpen() returns. The guard+assign block has no await
     /// between check and assign, so it is atomic on the single MainActor executor.
     private func ensureOpen() async {
-        // Test path (store injected) or a previously-completed open: nothing to do.
         if _alreadyOpen, store != nil { return }
-        // An open is already in flight — await the SAME task so we don't double-open.
-        if let openTask = _openTask { await openTask.value; return }
+
+        if let openTask = _openTask {
+            await openTask.value
+            return
+        }
+
+        print("METRICS: opening local store")
+
         let task = Task { @MainActor [self] in
             guard let path = try? StorePaths.defaultDatabasePath(),
                   let openedStore = try? await WhoopStore(path: path) else {
+                print("METRICS: FAILED to open local database")
                 lastError = "Could not open local database"
-                // Allow a retry on a future call.
                 _openTask = nil
                 return
             }
+
+            print("METRICS: local store opened")
             store = openedStore
-            serverSync = AppConfig.uploaderConfig(deviceId: deviceId)
-                .map { ServerSync(config: $0, store: openedStore, deviceId: deviceId) }
+
+            if let config = AppConfig.uploaderConfig(deviceId: deviceId) {
+                print("METRICS: server configuration present")
+                serverSync = ServerSync(
+                    config: config,
+                    store: openedStore,
+                    deviceId: deviceId
+                )
+                print("METRICS: ServerSync created")
+            } else {
+                print("METRICS: server configuration MISSING")
+                serverSync = nil
+            }
+
             _alreadyOpen = true
         }
+
         _openTask = task
         await task.value
     }
-
     // MARK: - App factory (kept for backward-compat; AppRoot now prefers init())
 
     /// Opens the shared on-disk store and builds ServerSync from AppConfig.
