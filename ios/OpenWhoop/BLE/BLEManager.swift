@@ -811,6 +811,9 @@ extension BLEManager: CBPeripheralDelegate {
             // Reassemble (no-op for already-complete frames) then route each complete frame.
             for frame in reassembler.feed(bytes) {
                 router.handle(frame: frame)                       // UI (always)
+                if frame.count > 4 {
+                    log("BLE FRAME: type=\(frame[4]) size=\(frame.count)")
+                }                
                 if frame.count > 6, frame[6] == WhoopCommand.getDataRange.rawValue,
                    let newest = BLEManager.dataRangeNewestUnix(from: frame) {
                     strapNewestTs = newest                        // feeds the liveness watchdog
