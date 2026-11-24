@@ -499,13 +499,23 @@ final class ServerSync {
     func putProfile(_ profile: Profile) async -> Bool {
         let path = "/v1/profile"
         var body: [String: Any] = ["device": deviceId]
-        if let h = profile.heightCm  { body["height_cm"]  = h }
-        if let w = profile.weightKg  { body["weight_kg"]  = w }
-        if let a = profile.age       { body["age"]         = a }
-        if let s = profile.sex       { body["sex"]         = s }
-        guard let bodyData = try? JSONSerialization.data(withJSONObject: body) else { return false }
-        print("PROFILE: JSON created, calling POST")
-        return await post(path: path, body: bodyData)
+
+        if let h = profile.heightCm { body["height_cm"] = h }
+        if let w = profile.weightKg { body["weight_kg"] = w }
+        if let a = profile.age { body["age"] = a }
+        if let s = profile.sex { body["sex"] = s }
+
+        guard let bodyData = try? JSONSerialization.data(withJSONObject: body) else {
+            print("PROFILE ERROR: JSON encoding failed")
+            return false
+        }
+
+        print("PROFILE: JSON created (\(bodyData.count) bytes)")
+        print("PROFILE: attempting POST /v1/profile")
+
+        let result = await post(path: path, body: bodyData)
+        print("PROFILE: POST result = \(result)")
+        return result
     }
 
     // MARK: - Raw HR series (downsampled, single request)
@@ -567,26 +577,37 @@ final class ServerSync {
     /// Perform a POST with Bearer auth + JSON body. Returns true on 2xx, false otherwise.
     private func post(path: String, body: Data) async -> Bool {
         guard let url = URL(string: path, relativeTo: config.baseURL)
-                     ?? URL(string: config.baseURL.absoluteString + path) else { return false }
+                     ?? URL(string: config.baseURL.absoluteString + path) else {
+            print("SERVER POST ERROR: invalid URL")
+            return false
+        }
+
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(config.apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = body
+
+        print("SERVER POST: sending \(path) (\(body.count) bytes)")
+
         do {
             let (data, response) = try await session.data(for: request)
+
             guard let http = response as? HTTPURLResponse else {
-                print("SERVER POST: no HTTP response")
+                print("SERVER POST ERROR: no HTTP response")
                 return false
             }
+
             print("SERVER POST: HTTP \(http.statusCode)")
+
             if !(200..<300).contains(http.statusCode) {
-                print("SERVER POST: \(String(data: data, encoding: .utf8) ?? "no response body")")
+                print("SERVER POST ERROR: \(String(data: data, encoding: .utf8) ?? "unreadable response")")
                 return false
             }
+
             return true
         } catch {
-            print("SERVER POST: network error: \(error)")
+            print("SERVER POST ERROR: \(error.localizedDescription)")
             return false
         }
     }
