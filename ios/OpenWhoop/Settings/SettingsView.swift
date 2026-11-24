@@ -352,28 +352,28 @@ struct SettingsView: View {
         switch unitSystem {
         case .imperial:
             // Was metric → convert cm → ft/in and kg → lbs.
-            if let cm = Double(heightCmStr) {
+            if let cm = parseDouble(heightCmStr) {
                 let (ft, ins) = ProfileUnits.heightFtIn(cm: cm)
                 heightFeet   = formatDouble(ft, zeroIsEmpty: true)
                 heightInches = formatDouble(ins, zeroIsEmpty: false)
             } else {
                 heightFeet = ""; heightInches = ""
             }
-            if let kg = Double(weightKgStr) {
+            if let kg = parseDouble(weightKgStr) {
                 weightLbsStr = formatDouble(ProfileUnits.weightLbs(kg: kg), zeroIsEmpty: true)
             } else {
                 weightLbsStr = ""
             }
         case .metric:
             // Was imperial → convert ft/in → cm and lbs → kg.
-            let ft = Double(heightFeet) ?? 0
-            let ins = Double(heightInches) ?? 0
+            let ft = parseDouble(heightFeet) ?? 0
+            let ins = parseDouble(heightInches) ?? 0
             if ft > 0 || ins > 0 {
                 heightCmStr = formatDouble(ProfileUnits.heightCm(feet: ft, inches: ins), zeroIsEmpty: true)
             } else {
                 heightCmStr = ""
             }
-            if let lbs = Double(weightLbsStr) {
+            if let lbs = parseDouble(weightLbsStr) {
                 weightKgStr = formatDouble(ProfileUnits.weightKg(lbs: lbs), zeroIsEmpty: true)
             } else {
                 weightKgStr = ""
@@ -387,24 +387,24 @@ struct SettingsView: View {
         let heightCm: Double? = {
             switch unitSystem {
             case .imperial:
-                let ft = Double(heightFeet) ?? 0
-                let ins = Double(heightInches) ?? 0
+                let ft = parseDouble(heightFeet) ?? 0
+                let ins = parseDouble(heightInches) ?? 0
                 let cm = ProfileUnits.heightCm(feet: ft, inches: ins)
                 return cm > 0 ? cm : nil
             case .metric:
-                return Double(heightCmStr).flatMap { $0 > 0 ? $0 : nil }
+                return parseDouble(heightCmStr).flatMap { $0 > 0 ? $0 : nil }
             }
         }()
 
         let weightKg: Double? = {
             switch unitSystem {
             case .imperial:
-                return Double(weightLbsStr).flatMap { lbs -> Double? in
+                return parseDouble(weightLbsStr).flatMap { lbs -> Double? in
                     let kg = ProfileUnits.weightKg(lbs: lbs)
                     return kg > 0 ? kg : nil
                 }
             case .metric:
-                return Double(weightKgStr).flatMap { $0 > 0 ? $0 : nil }
+                return parseDouble(weightKgStr).flatMap { $0 > 0 ? $0 : nil }
             }
         }()
 
@@ -459,6 +459,11 @@ struct SettingsView: View {
     }
 
     // MARK: - Helpers
+
+    private func parseDouble(_ value: String) -> Double? {
+        Double(value.trimmingCharacters(in: .whitespaces)
+            .replacingOccurrences(of: ",", with: "."))
+    }
 
     private func formatDouble(_ v: Double, zeroIsEmpty: Bool) -> String {
         if zeroIsEmpty && v == 0 { return "" }
