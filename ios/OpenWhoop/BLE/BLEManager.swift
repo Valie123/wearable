@@ -844,6 +844,10 @@ extension BLEManager: CBPeripheralDelegate {
                     // delays each chunk's insert→trim-ack — the strap then stalls waiting for the ack
                     // and the 20 s watchdog fires (the residual timeout). Drop the flood during offload.
                     if BLEManager.isOffloadFrame(frame) {
+                        if frame[4] == 49 {
+                            let parsed = parseFrame(frame)
+                            log("BLE META: meta_type=\(String(describing: parsed.parsed["meta_type"])) unix=\(String(describing: parsed.parsed["unix"])) trim=\(String(describing: parsed.parsed["trim_cursor"]))")
+                        }
                         armBackfillTimeout()
                         routeBackfillFrame(frame)
                     }
