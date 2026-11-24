@@ -573,11 +573,19 @@ final class ServerSync {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = body
         do {
-            let (_, response) = try await session.data(for: request)
-            guard let http = response as? HTTPURLResponse,
-                  (200..<300).contains(http.statusCode) else { return false }
+            let (data, response) = try await session.data(for: request)
+            guard let http = response as? HTTPURLResponse else {
+                print("SERVER POST: no HTTP response")
+                return false
+            }
+            print("SERVER POST: HTTP \(http.statusCode)")
+            if !(200..<300).contains(http.statusCode) {
+                print("SERVER POST: \(String(data: data, encoding: .utf8) ?? "no response body")")
+                return false
+            }
             return true
         } catch {
+            print("SERVER POST: network error: \(error)")
             return false
         }
     }
