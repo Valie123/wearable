@@ -458,8 +458,18 @@ public final class BLEManager: NSObject, ObservableObject {
     /// gate AND the BackfillPolicy rate-limiter for the trigger. On a go: records the attempt time
     /// (persisted) and starts the offload.
     func requestSync(_ trigger: BackfillTrigger) {
-        guard BLEManager.shouldRunPeriodicBackfill(
-            connected: state.connected, bonded: state.bonded, backfilling: backfilling) else { return }
+        guard state.connected else {
+            log("Backfill: \(trigger) skipped — not connected")
+            return
+        }
+        guard state.bonded else {
+            log("Backfill: \(trigger) skipped — not bonded")
+            return
+        }
+        guard !backfilling else {
+            log("Backfill: \(trigger) skipped — already running")
+            return
+        }
         let now = Date().timeIntervalSince1970
         let last = UserDefaults.standard.object(forKey: BLEManager.backfillLastAtKey) as? Double
         guard BackfillPolicy.shouldRun(trigger: trigger, now: now, lastBackfillAt: last) else {
