@@ -50,10 +50,15 @@ jobs:
       - name: Verify built app configuration
         run: |
           PLIST="build/DerivedData/Build/Products/Debug-iphoneos/OpenWhoop.app/Info.plist"
+          echo "Checking built app configuration..."
           /usr/libexec/PlistBuddy -c "Print :WHOOP_BASE_URL" "$PLIST"
           /usr/libexec/PlistBuddy -c "Print :WHOOP_DEVICE_ID" "$PLIST"
-          /usr/libexec/PlistBuddy -c "Print :WHOOP_API_KEY" "$PLIST" >/dev/null
-          echo "API key is present in built app"
+          if /usr/libexec/PlistBuddy -c "Print :WHOOP_API_KEY" "$PLIST" >/dev/null; then
+            echo "API key is present in built app"
+          else
+            echo "API key is MISSING"
+            exit 1
+          fi
 
       - name: Package unsigned IPA
         run: |
