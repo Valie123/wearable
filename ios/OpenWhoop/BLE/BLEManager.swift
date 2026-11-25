@@ -540,6 +540,11 @@ public final class BLEManager: NSObject, ObservableObject {
         send(.setClock, payload: BLEManager.setClockPayload())
         send(.setAlarmTime, payload: WhoopCommand.setAlarmPayload(epochSec: epochSec))
         log("Alarm: armed for \(date) (epoch \(epochSec))")
+
+        // Read back the strap's stored alarm after allowing the write to process.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            self?.getStrapAlarm()
+        }
     }
 
     /// Disarm the currently-armed firmware alarm.
@@ -836,7 +841,13 @@ extension BLEManager: CBPeripheralDelegate {
                 router.handle(frame: frame)                       // UI (always)
                 if frame.count > 4 {
                     log("BLE FRAME: type=\(frame[4]) size=\(frame.count)")
-                }                
+                    if frame.count > 7,
+                       frame[4] == 36,
+                       frame[6] == WhoopCommand.getAlarmTime.rawValue {
+                        let raw = frame.map { String(format: "%02X", $0) }.joined(separator: " ")
+                        log("GET_ALARM_TIME RESPONSE: \(raw)")
+                    }
+                }
                 if frame.count > 6, frame[6] == WhoopCommand.getDataRange.rawValue,
                    let newest = BLEManager.dataRangeNewestUnix(from: frame) {
                     strapNewestTs = newest                        // feeds the liveness watchdog
