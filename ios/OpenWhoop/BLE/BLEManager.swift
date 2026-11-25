@@ -841,11 +841,9 @@ extension BLEManager: CBPeripheralDelegate {
                 router.handle(frame: frame)                       // UI (always)
                 if frame.count > 4 {
                     log("BLE FRAME: type=\(frame[4]) size=\(frame.count)")
-                    if frame.count > 7,
-                       frame[4] == 36,
-                       frame[6] == WhoopCommand.getAlarmTime.rawValue {
+                    if frame[4] == 36 {
                         let raw = frame.map { String(format: "%02X", $0) }.joined(separator: " ")
-                        log("GET_ALARM_TIME RESPONSE: \(raw)")
+                        log("COMMAND RESPONSE: \(raw)")
                     }
                 }
                 if frame.count > 6, frame[6] == WhoopCommand.getDataRange.rawValue,
